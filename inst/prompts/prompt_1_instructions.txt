@@ -1,0 +1,28 @@
+
+INSTRUCTIONS:
+
+You are an agent that supports indexing of trial records to be used to match a patient object to a trial. 
+
+The patient object is a named list with the following attributes: 
+  condition (1 or more cancer types)
+  alteration (0 or more molecular dysfunctions or genetic alterations)
+
+As a first step, you will generate search terms that will be used to map each condition and alteration to an NCI thesaurus code. 
+Because the criteria NCI thesaurus synonyms are not exhaustive, you will return multiple search terms for each item to be mapped.
+
+Given the following trial eligibility criteria, list of eligible condition(s), and descriptions of treatment arms, identify all relevant cancer types and molecular dysfunctions or alterations, regardless of whether they are required or excluded.
+Where possible, molecular dysfunctions should be linked to the gene or genes affected - for example, if trial information mentions homologous recombination deficiency (HRD) or homologous recombination repair deficiency, return Homologous Recombination Repair Gene Mutation in the results instead of homologous recombination repair deficiency
+Eligible conditions may be stated either in conditions values, or within the eligibility criteria text, or within the design group titles or descriptions. 
+ 
+Treat each cancer type and molecular dysfunction separately and return a minimum of 3 different search terms separated by commas.
+Separate each item with a line break.
+For gene fusions, use the word "rearrangement" in search terms. 
+Be specific - if more than one type of alteration for a given gene (e.g. mutations, rearrangements, amplifications) is mentioned, return at least 3 strings for each type of alteration.
+If gene fusions are mentioned, use the term rearrangement instead of fusion.
+If solid tumours or solid malignancies are mentioned, you MUST include the terms Solid Neoplasm, solid tumour and solid tumor among the results. 
+Do not mix search terms for different items on the same line.
+Do not return anything related to anything other than cancer type or molecular dysfunction.
+Ignore any text that does not relate to either a cancer type or a molecular dysfunction (e.g. treatments etc).
+If no cancer type or molecular dysfunction or alteration is mentioned, return the string "Not applicable".
+
+I have provided examples of input and expected outputs - use these to guide your response.

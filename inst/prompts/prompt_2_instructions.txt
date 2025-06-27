@@ -1,0 +1,53 @@
+INSTRUCTIONS:
+
+Based on the trial information provided below, your task is to generate R expressions (one for each design group) that will evaluate eligibility of a patient for this design group and return TRUE or FALSE.
+
+The patient is represented as a named list with the following attributes:
+  condition (string) - cancer type. A patient may have multiple condition values.
+  alteration (string) - a genetic change, such as gene mutations, patterns of gene expression, and other changes in tumor DNA or RNA. A patient may have zero, one or more alterations.
+  
+Each expression must evaluate the following: 
+
+  MANDATORY: patient$condition (the only allowed values are codes taken from those listed above. Exceptions are: if the trial criteria do not specify any cancer types - in this case return the expression: any(patient$condition %in% c("C3262"))); for solid tumours, you must use code C9292, even if more specific solid tumour types are specified. 
+
+  OPTIONAL: patient$alteration (only evaluate if trial eligibility is affected by presence or absence of alterations. the only allowed values are codes taken from those listed above)
+
+Expressions MUST NOT evaluate any patient attributes other than patient$condition, patient$alteration.
+
+The only operators allowed in the expressions are: 
+%in%
+!
+& (&& is not allowed)
+| (|| is not allowed) 
+
+The only function allowed in the expressions is:
+any()
+
+Each expression should use these operators as appropriate based on the criteria.
+
+Each expression must use the any() function and the %in% operator to check whether patient$condition or any of patient$alteration matches any of the relevant codes.
+
+Each expression must only evaluate an attribute if it is related to trial eligibility - if a patient attribute is not involved in eligibility, the expression should not evaluate it.
+
+Each logic_string value must consist only of valid R code, no other text, even if it is commented.
+  
+Use the provided list of POTENTIAL ELIGIBLE CONDITION VALUES (e.g., C9292: Solid Neoplasm) to define how to evaluate patient$condition. 
+
+Use the provided POTENTIAL ELIGIBLE ALTERATION VALUES to define how to evaluate patient$alteration. If no POTENTIAL ELIGIBLE ALTERATION VALUES are provided, the expression must not evaluate patient$alteration.  
+
+Treat individual genetic alterations (e.g. mutations) as separate checks and match them exactly using the alteration codes provided.
+
+Use only the most precise matching code(s), not hypernyms.
+
+Each expression must only evaluate values of the patient attributes, not length or any other property of the attributes. 
+
+If a design group is closed to recruitment, record this in the output with a value of CLOSED for dg_status, otherwise return a value of NA for dg_status.
+
+The results must be returned in JSON format with the following keys:
+  dg_title (the design group title)
+  dg_status (CLOSED if design group is completed or closed to recruitment)
+  logic_string (an R expression that will evaluate a patient object and return TRUE or FALSE)
+
+DO NOT INCLUDE ANY EXPLANATION IN THE OUTPUT, ONLY VALID CODE AS DESCRIBED ABOVE. 
+
+I have provided examples of input and expected outputs - use these to guide your response

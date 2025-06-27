@@ -1,0 +1,15 @@
+EXAMPLE 1 INPUT:\n 
+POTENTIAL ELIGIBLE CONDITION VALUES:
+[{"code":"C2929","PT":"Squamous Cell Carcinoma"},{"code":"C35850","PT":"Head and Neck Carcinoma"},{"code":"C4013","PT":"Malignant Head and Neck Neoplasm"},{"code":"C4833","PT":"Oral Cavity Squamous Cell Carcinoma"},{"code":"C4863","PT":"Prostate Carcinoma"},{"code":"C9315","PT":"Lip and Oral Cavity Carcinoma"}]
+POTENTIAL ELIGIBLE ALTERATION VALUES:
+[]
+
+
+TRIAL INFORMATION: 
+{"nct_id":"NCT06676943","conditions":["Head and Neck Cancers","Prostate Cancer Surgery"],"criteria":"Inclusion Criteria:\n\nFor prostate cancer patients:\n\n1. At least 18 years old at time of consent.\n2. Listed for Robotic Radical Prostatectomy.\n\nFor head and neck cancer patients:\n\n1. At least 18 years old at time of consent.\n2. Listed for resection of oral squamous cell carcinoma head and neck cancer resection.\n3. Specimen able to fit into Xeos Aura specimen container.\n\nExclusion Criteria:\n\nFor prostate cancer patients:\n\n1. General or local contra-indications for resectional surgery.\n2. Lacks capacity to provide informed consent.\n3. Currently participating in another interventional research study.\n\nFor head and neck cancer patients:\n\n1. General or local contra-indications for resectional surgery.\n2. Lacks capacity to provide informed consent.\n3. Pregnant or breast feeding patient.\n4. Currently participating in another interventional research study.","design_groups":[{"dg_title":"Radical prostatectomy and Head and neck specimens","dg_description":"Patients undergoing surgical resection for prostate cancer or head and neck cancer."}]}
+
+EXAMPLE 1 CHAIN OF THOUGHT: the trial mentions eligibility for prostate cancer patients and head and neck cancer patients. This is consistent with the values specified for condition name for this trial. The trial has a single design group with id 51682614. The expression should evaluate patient$condition and patient$age. For prostate cancer, The criteria do not require adenocarcinoma specifically, so C4863 is the correct term to use. For head and neck patients, the criteria do not require squamous cell carcinoma specifically, so C4013 is the correct term to use.
+There is no indication that the design group is closed to recruitment, so return NA for dg_status.
+
+EXAMPLE 1 OUTPUT: 
+[{"dg_title":"Radical prostatectomy and Head and neck specimens", "dg_status":"NA", "logic_string":"any(patient$condition %in% c(\"C4863\", \"C4013\"))"}] 

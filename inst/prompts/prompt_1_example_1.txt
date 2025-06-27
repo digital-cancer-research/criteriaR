@@ -1,0 +1,27 @@
+EXAMPLE 1 INPUT: 
+
+{"nct_id":"NCT04775485","conditions":["Breast Cancer"],"criteria":"Inclusion Criteria:
+If pre/perimenopausal women and men treatment with luteinizing hormone-releasing hormone (LHRH) agonist therapy beginning at least 2 weeks prior to Day 1 of Cycle 1
+Histologically or cytologically confirmed adenocarcinoma of the breast that is locally advanced or metastatic and is not amenable to surgical or radiation therapy with curative intent
+Documented HR +/ HER2- tumor according to American Society of Clinical Oncology/College of American Pathologists (ASCO/CAP) guidelines
+Confirmation of biomarker eligibility: detection of specified mutation(s) of PIK3CA via specified test
+Disease progression after or during treatment with a combination of CDK4/6i and endocrine therapy: <= 2 prior lines of systemic therapy in mBC setting; CDK4/6i based therapy does not need to be the last one received prior study entry; one line of chemotherapy in mBC setting allowed
+Measurable or evaluable disease per Response Evaluation Criteria in Solid Tumors version 1.1 (RECIST v1.1)
+Participants for whom endocrine-based therapy is recommended and treatment with cytotoxic chemotherapy is not indicated at time of entry into the study, as per national or local treatment guidelines
+Eastern Cooperative Oncology Group (ECOG) Performance Status of 0, 1, or 2
+Life expectancy of > 6 months
+Adequate hematologic and organ function prior to initiation of study treatment","design_groups":[{"dg_id":51978465,"dg_title":"Inavolisib + Fulvestrant","dg_description":""},{"dg_id":51978466,"dg_title":"Alpelisib + Fulvestrant","dg_description":""}]
+}
+
+EXAMPLE 1 CHAIN OF THOUGHT:     
+The only value for eligible_conditions is Breast Cancer, so return three comma-separated strings as search terms. 
+The trial eliigbility criteria mention adenocarcinoma of the breast, which is a cancer type, so return at least three comma-separated strings as search terms. 
+Luteinizing hormone-releasing hormone (LHRH) agonist therapy is a treatment, metastatic and locally advanced are related to disease status so ignore these terms. 
+The following relate to gene or molecular dysfunctions, so return at least three comma-separated search terms for each: HR+ (which means hormone receptor positive), HER2- (which means Her2/Neu negative) and PIK3CA mutation.
+
+EXAMPLE 1 OUTPUT: 
+Breast Cancer,Breast Carcinoma,Carcinoma of Breast\n
+Breast adenocarcinoma,Adenocarcinoma of Breast,Adenocarcinoma of the Breast\n
+Hormone receptor positive,HR positive,HR+|HR-positive\n
+Her2 negative,HER2 negative,HR-,ERBB2/Neu negative,HER2-Neu negative\n
+PIK3CA mutation,PIK3CA Gene Mutation,PIK3CA mutant

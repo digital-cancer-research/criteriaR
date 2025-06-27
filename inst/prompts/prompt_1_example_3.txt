@@ -1,0 +1,26 @@
+EXAMPLE 3 INPUT:\n 
+{"nct_id":"NCT04775485","conditions":["Advanced Solid Tumor"],"criteria":"Module 1 - Atezolizumab: Genomically selected populations will all receive the same drug
+Arm 1A: BRCA1 or BRCA2 mutations
+Arm 1E: tumors with other mutations in DNA-repair genes
+Arm 1F: tumors with amplified PDL1
+Arm 2A: solid tumor with KRAS G12C mutation",
+"design_groups":[{"dg_id": 51978453,"dg_title":"Module 1 Arm 1A (Breast)","dg_description":""}, 
+{"dg_id": 51978454,"dg_title":"Module 1 Arm 1E (Breast)","dg_description":""},
+{"dg_id": 51978455,"dg_title":"Module 1 Arm 1F (NSCLC)","dg_description":""},
+{"dg_id": 51978456,"dg_title":"Module 1 Arm 2A","dg_description":""}]
+}
+
+EXAMPLE 3 CHAIN OF THOUGHT:     
+The eligible conditions value and trial eligibility criteria mention solid tumours, so include terms related to this in the output. 
+The eligibility criteria also mention several genetic dysfunctions: mutations in BRCA1, BRCA2, KRAS mutation (specifically KRAS G12C so the terms must relate to this specific alteration, not generic KRAS mutations) and PD-L1 amplification. 
+The design group information also specifies cancer types: NSCLC (non-small cell lung cancer) and Breast (since this is a cancer study, assume this is shorthand for Breast Cancer)
+
+EXAMPLE 3 OUTPUT: 
+solid tumour, solid tumor, solid neoplasm, solid cancer, solid tumours\n
+BRCA1 gene mutation, BRCA1 mutation, BRCA1 mutant\n
+BRCA2 gene mutation, BRCA2 mutation, BRCA2 mutant\n
+DNA Repair Gene Mutation, DNA Repair Mutation, DNA Repair Mutation Positive\n
+PDL1 Gene Amplification, PD-L1 Gene Amplification, PD-L1 Positive, PD-L1+\n
+KRAS G12C, KRAS G12C mutation, KRAS p.G12C\n
+NSCLC, Lung Non-Small Cell Carcinoma, Non-Small Cell Cancer of Lung
+Breast Carcinoma, breast cancer, cancer of the breast, cancer of breast

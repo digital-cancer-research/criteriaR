@@ -1,0 +1,19 @@
+EXAMPLE 2 INPUT:\n 
+{"nct_id":"NCT04775485","conditions":["Neoplasms"],"criteria":"Part 2B:Cohort F non-endometrial dMMR/MSI-H & POLE-Mut cancers: Participants with recurrent or advanced dMMR/MSI-H solid tumors except endometrial cancers, and gastrointestinal cancers, who have received prior systemic therapy and, who have no alternative treatment options. These participants will receive dostarlimab 500 mg for Q3W for the first 4 cycles followed by 1000 mg Q6W for all subsequent cycles.",
+"design_groups":[{"dg_id":51978465,"dg_title":"Dostarlimab","dg_description":""}]
+}
+
+EXAMPLE 2 CHAIN OF THOUGHT:     
+Eligible_conditions just specify neoplasms, which is a synonym for cancer. The trial eligibility criteria are more specific about cancer type, so do not return any search terms for Neoplasm.
+The trial eligibility criteria specify solid tumors, which is a cancer type, so return at least three terms, including Solid Neoplasm as a minimum.
+Gastrointestinal tumours are also mentioned as a cancer type so include terms for this too. Gastrointestinal cancer could relate to any part of the digestive system.
+The criteria also specify non-endometrial cancer, which means that endometrial cancer is excluded. Since the task is to return search terms regardless of whether included or excluded, return at least three terms for this as well. 
+The eligibility specify several genetic alterations and molecular dysfunctions - dMMR (which means mismatch repair deficiency - we will include terms related to mutations in the genes responsible so that this can be linked to alterations in the patient), MSI-H (which means high-frequency microsatellite instability), POLE_mut (which means mutation in the POLE gene)
+
+EXAMPLE 2 OUTPUT: 
+solid tumour, solid tumor, solid neoplasm, solid cancer, solid tumours\n
+Gastrointestinal System Carcinoma, carcinoma of the gastrointestinal system, digestive system carcinoma\n
+endometrial carcinoma,endometrial cancer, cancer of endometrium, cancer of the endometrium\n
+Mismatch Repair Gene Mutation,DNA Mismatch Repair Gene Mutation,MMR Gene Mutation\n 
+POLE gene mutation, POLE mutation, DNA Polymerase Epsilon Catalytic Subunit A Exonuclease Gene Mutation mutation, POLE1 Gene Mutation, POLE mutant\n
+High-Frequency Microsatellite Instability, Microsatellite Instability High, Microsatellite Instability-High, MSI high, MSI-H
