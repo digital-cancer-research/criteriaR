@@ -3,12 +3,14 @@
 #' @description
 #' Based on the prompts formed in the previous step, generate R expressions (1 per treatment arm) that evaluate a patient object and return either `TRUE` (eligibile) or `FALSE` (ineligible)
 #' @param eligibility_data A dataframe including columns `prompt_2` and `prompt_2_output`
+#' @param llm_endpoint The API endpoint URL.
+#' @param llm_api_key The API key used for authentication.
 #' @returns The input dataframe with the `prompt_2_output` column updated with the generated logic from the LLM. For treatment arms that already have an output (or where no relevant terms are mentioned (because an identical prompt2 has been used before) the original response is preserved.
 #' @details
 #' Calls the function `callLLM' for which API endpoint and key are required. These are specified as environment variables
 #' @seealso \code{\link{callLLM}}
 #' @export
-createEligibilityLogic = function(eligibility_data) {
+createEligibilityLogic = function(eligibility_data, llm_endpoint,llm_api_key) {
   eligibility_criteria <- eligibility_data
   for(i in 1:nrow(eligibility_criteria)) {
     if(!is.na(eligibility_criteria$prompt_2_output[i])) {
