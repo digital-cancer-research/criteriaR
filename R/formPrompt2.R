@@ -32,7 +32,35 @@
 #'    - `inst/prompts/prompt_2_example_2.txt`
 #'
 #' @export
-formPrompt2 = function(eligibility_data, thesaurus ) {
+formPrompt2 = function(eligibility_data, thesaurus,
+                       prompt_2_instructions = NULL,
+                       prompt_2_example_1 = NULL,
+                       prompt_2_example_2 = NULL ) {
+
+  # prompt_2_instructions <- readr::read_file(system.file("prompts", "prompt_2_instructions.txt", package = "criteriaR"))
+  # prompt_2_example_1 <- readr::read_file(system.file("prompts", "prompt_2_example_1.txt", package = "criteriaR"))
+  # prompt_2_example_2 <- readr::read_file(system.file("prompts", "prompt_2_example_2.txt", package = "criteriaR"))
+
+  if (is.null(prompt_2_instructions)) {
+    prompt_2_instructions <- readr::read_file(
+      system.file("prompts", "prompt_2_instructions.txt", package = "criteriaR")
+    )
+  }
+
+  if (is.null(prompt_2_example_1)) {
+    prompt_2_example_1 <- readr::read_file(
+      system.file("prompts", "prompt_2_example_1.txt", package = "criteriaR")
+    )
+  }
+
+  if (is.null(prompt_2_example_2)) {
+    prompt_2_example_2 <- readr::read_file(
+      system.file("prompts", "prompt_2_example_2.txt", package = "criteriaR")
+    )
+  }
+
+
+
   ## combine lookup values from LLM and dictionaries into single lists per study
   eligibility_criteria <- eligibility_data |>
     dplyr::mutate(cancer_lookups_combined = purrr::map2(cancer_lookup, cancer_lookup_llm, ~ unique(c(.x, .y)))) |>
@@ -65,9 +93,7 @@ formPrompt2 = function(eligibility_data, thesaurus ) {
   }
 
   ## form second prompts to LLM
-  prompt_2_instructions <- readr::read_file(system.file("prompts", "prompt_2_instructions.txt", package = "criteriaR"))
-  prompt_2_example_1 <- readr::read_file(system.file("prompts", "prompt_2_example_1.txt", package = "criteriaR"))
-  prompt_2_example_2 <- readr::read_file(system.file("prompts", "prompt_2_example_2.txt", package = "criteriaR"))
+
 
   eligibility_criteria$prompt_2 <- paste(
     prompt_2_instructions,

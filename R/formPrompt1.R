@@ -13,15 +13,44 @@
 #'    - `inst/prompts/prompt_1_example_2.txt`
 #'    - `inst/prompts/prompt_1_example_3.txt`
 #' @export
-formPrompt1 = function(eligibility_data) {
+formPrompt1 = function(eligibility_data,
+                       prompt_1_instructions = NULL,
+                       prompt_1_example_1 = NULL,
+                       prompt_1_example_2 = NULL,
+                       prompt_1_example_3 = NULL) {
   eligibility_lookups = eligibility_data
-  prompt_1_instructions <- readr::read_file(system.file("prompts", "prompt_1_instructions.txt", package = "criteriaR"))
-  prompt_1_example_1 <- readr::read_file(system.file("prompts", "prompt_1_example_1.txt", package = "criteriaR"))
-  prompt_1_example_2 <- readr::read_file(system.file("prompts", "prompt_1_example_2.txt", package = "criteriaR"))
-  prompt_1_example_3 <- readr::read_file(system.file("prompts", "prompt_1_example_3.txt", package = "criteriaR"))
+  # prompt_1_instructions <- readr::read_file(system.file("prompts", "prompt_1_instructions.txt", package = "criteriaR"))
+  # prompt_1_example_1 <- readr::read_file(system.file("prompts", "prompt_1_example_1.txt", package = "criteriaR"))
+  # prompt_1_example_2 <- readr::read_file(system.file("prompts", "prompt_1_example_2.txt", package = "criteriaR"))
+  # prompt_1_example_3 <- readr::read_file(system.file("prompts", "prompt_1_example_3.txt", package = "criteriaR"))
+
+  # If no custom prompts are provided, read defaults from package
+  if (is.null(prompt_1_instructions)) {
+    prompt_1_instructions <- readr::read_file(
+      system.file("prompts", "prompt_1_instructions.txt", package = "criteriaR")
+    )
+  }
+
+  if (is.null(prompt_1_example_1)) {
+    prompt_1_example_1 <- readr::read_file(
+      system.file("prompts", "prompt_1_example_1.txt", package = "criteriaR")
+    )
+  }
+
+  if (is.null(prompt_1_example_2)) {
+    prompt_1_example_2 <- readr::read_file(
+      system.file("prompts", "prompt_1_example_2.txt", package = "criteriaR")
+    )
+  }
+
+  if (is.null(prompt_1_example_3)) {
+    prompt_1_example_3 <- readr::read_file(
+      system.file("prompts", "prompt_1_example_3.txt", package = "criteriaR")
+    )
+  }
 
 
-  filepath <-
+  # filepath <-
 
 
 
@@ -31,7 +60,7 @@ formPrompt1 = function(eligibility_data) {
     prompt_1_example_1,
     prompt_1_example_2,
     prompt_1_example_3,
-    'No more examples - the trial infomration to be analysed for this task are as follows....',
+    'No more examples - the trial information to be analysed for this task are as follows....',
     eligibility_lookups$json,
     sep = '\n'
   )
