@@ -3,6 +3,10 @@
 #' @description
 #' In addition to dictionary based lookups of cancer types and alterations in trial data, form prompts (1 per trial) that will send the trial data to language model in order to identify additional matches.\cr
 #' @param eligibility_data A dataframe containing trial information in JSON format.
+#' @param prompt_1_instructions (Optional) Instructions to be included at start of prompt. If null, default text from package will be used.
+#' @param prompt_1_example_1 (Optional) An example of input, reasoning and expected output. If null, default text from package will be used.
+#' @param prompt_1_example_2 (Optional) An example of input, reasoning and expected output. If null, default text from package will be used.
+#' @param prompt_1_example_3 (Optional) An example of input, reasoning and expected output. If null, default text from package will be used.
 #' @returns The input dataframe with an additional column, `prompt_1`, which contains the fully formed prompts for the LLM.
 #' @details
 #' - Uses few-shot prompting with chain of thought reasoning.\cr

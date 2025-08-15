@@ -13,8 +13,10 @@
 #' @param eligibility_data A dataframe containing the initial eligibility criteria data
 #' and the results from both LLM processing and dictionary lookups for cancer types and
 #' molecular dysfunctions.
-#' @param thesaurus A list containing the pruned thesaurus data used for obtaining the
-#' Preferred Terms (PTs) corresponding to the identified codes from the lookups.
+#' @param thesaurus A list containing the pruned thesaurus data used for obtaining the Preferred Terms (PTs) corresponding to the identified codes from the lookups.
+#' @param prompt_2_instructions (Optional) Instructions to be included at start of prompt. If null, default text from package will be used.
+#' @param prompt_2_example_1 (Optional) An example of input, reasoning and expected output. If null, default text from package will be used.
+#' @param prompt_2_example_2 (Optional) An example of input, reasoning and expected output. If null, default text from package will be used.
 #'
 #' @returns Returns the input dataframe augmented with additional columns:
 #' - `cancer_lookups_combined`: A combined list of unique cancer type codes identified from both LLM outputs and dictionary lookups.
