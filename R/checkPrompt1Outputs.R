@@ -10,11 +10,6 @@ checkPrompt1Outputs <- function(latest_prompts, db_path) {
   ## add a column that will store outputs from LLM
   latest_prompts$prompt_1_output <- NA
 
-  ## if local database doesn't exist (i.e. pipeline has not yet been run) just return the table
-  # db_path <- "data/processed/trial_recommender.sqlite"
-  # config <- yaml::read_yaml("config/config.yaml")
-  # db_path = config$db_path
-
   if(!(file.exists(db_path))) {
     return(latest_prompts)
   }

@@ -63,6 +63,10 @@ checkEligibilityLogic = function(eligibility_data) {
 
   eligibility_data$whitelist <- grepl(pattern = allowed_pattern, x = eligibility_data$logic)
 
+  ## delete rows containing invalid logic
+  eligibility_data <- eligibility_data |>
+    dplyr::filter(whitelist == 1)
+
 
   return(eligibility_data)
 
