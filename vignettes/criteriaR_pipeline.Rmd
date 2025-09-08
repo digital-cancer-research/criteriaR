@@ -1,0 +1,304 @@
+---
+title: "criteriaR pipeline example"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+require(dplyr)
+require(tictoc)
+
+devtools::install_github("digital-cancer-research/nciTools")
+devtools::install_github("digital-cancer-research/criteriaR")
+
+```
+
+```{r country configurations}
+
+country = "United Kingdom"
+db_path <- file.path(tempdir(), "mydb.sqlite")
+## connect to / create a new SQLIte DB at specified path
+sqlite_con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+```
+
+```{r process NCIt, message=FALSE}
+
+NCIt_raw = nciTools::downloadThesaurus()
+
+thesaurus = nciTools::processThesaurus(NCIt = NCIt_raw)
+## NCIt is a named list with dataframes thesaurus, parents and synonyms
+
+## save thesaurus to DB
+nciTools::saveThesaurus(thesaurus_processed = thesaurus, db_connection = sqlite_con)
+
+```
+
+
+```{r create dictionaries}
+
+dictionaries = list(
+  ## cancer type dict
+  cancer_dict = nciTools::createDictionary(source_data = thesaurus$thesaurus, semantic_types = 'Neoplastic Process'),
+
+  drug_dict = nciTools::createDictionary(source_data = thesaurus$thesaurus, semantic_types = c("Pharmacologic Substance", "Biologically Active Substance", "Clinical Drug", "Steroid", "Immunologic Factor", "Therapeutic or Preventive Procedure")),
+
+  gene_dict = nciTools::createDictionary(source_data = thesaurus$thesaurus, semantic_types = 'Gene or Genome'),
+
+  alteration_dict = nciTools::createDictionary(source_data = thesaurus$thesaurus, semantic_types = 'Cell or Molecular Dysfunction')
+)
+```
+
+### **Download trial data**  
+  
+```{r connect to clinicaltrialsgov database mirror}
+
+drv = RPostgres::Postgres()
+ct_gov_connection <- DBI::dbConnect(drv,
+                              dbname="aact",
+                              host="aact-db.ctti-clinicaltrials.org",
+                              port=5432,
+                              user=Sys.getenv('aact_username'),
+                              password =Sys.getenv('aact_password')
+                            )
+
+```
+
+```{r download trial data parameterised}
+
+
+## get data for all cancer studies with at least one site open or in setup in the specified country
+studies_query <- "SELECT DISTINCT s.nct_id, s.last_update_posted_date, s.primary_completion_date, study_type, s.acronym, s.brief_title, s.overall_status, s.phase, s.number_of_arms
+        FROM studies s
+        INNER JOIN conditions c ON c.nct_id = s.nct_id
+        INNER JOIN facilities f ON s.nct_id = f.nct_id
+        INNER JOIN eligibilities e ON s.nct_id = e.nct_id
+        WHERE s.study_type LIKE ('INTERVENTIONAL')
+        AND s.overall_status IN ('RECRUITING', 'NOT_YET_RECRUITING')
+        AND lower(f.country) IN ($1)
+        AND f.status IN ('RECRUITING', 'NOT_YET_RECRUITING')
+        AND (c.downcase_name LIKE '%cancer%'
+        OR c.downcase_name LIKE '%neoplasm%'
+        OR c.downcase_name LIKE '%carcinoma%'
+        OR c.downcase_name LIKE '%tumo%'
+        OR c.downcase_name LIKE '%sarcoma%'
+        OR c.downcase_name LIKE '%melanoma%'
+        OR c.downcase_name LIKE '%mesothelioma%'
+        OR c.downcase_name LIKE '%chordoma%')"
+
+## get data from clinicaltrials.gov
+studies <- DBI::dbGetQuery(ct_gov_connection,studies_query, params = list(tolower(country)))
+
+```
+
+
+
+```{r define a subset of trials for analysis}
+
+all_study_ids = unique(studies$nct_id)
+
+set.seed(1234)
+
+sampled_study_ids = sample(all_study_ids, size = 50)
+
+```
+
+```{r download trial meta data parameterised}
+
+## eligibilities, conditions, design_groups, design_group_interventions, interventions, facilities, facility_contacts
+eligibilities <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM eligibilities WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                                   )
+
+conditions <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM conditions WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+designs <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM designs WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+design_groups <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM design_groups WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+design_group_interventions <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM design_group_interventions WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+interventions <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM interventions WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+facilities <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM facilities WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+facility_contacts <- DBI::dbGetQuery(ct_gov_connection,
+                                 statement = "SELECT DISTINCT * FROM facility_contacts WHERE nct_id IN ($1)",
+                                 params = list(sampled_study_ids)
+                              )
+
+trial_data = list(
+    studies= studies,
+    facilities = facilities,
+    facility_contacts = facility_contacts,
+    conditions = conditions,
+    designs = designs,
+    design_groups = design_groups,
+    design_group_interventions = design_group_interventions,
+    interventions = interventions,
+    eligibilities = eligibilities
+  )
+
+# trial_data is a list of dataframes 
+# [1] "studies"                    "facilities"                 "facility_contacts"         
+# [4] "conditions"                 "designs"                    "design_groups"             
+# [7] "design_group_interventions" "interventions"              "eligibilities"
+
+```
+
+
+### **Annotate trial data**  
+  
+```{r form eligibility logic, echo=TRUE, results='hide'}
+## print statements outputs hidden for this chunk
+
+## get trial data as json string
+trial_annotations = criteriaR::compose_trial_json(trial_data = trial_data) |> 
+  dplyr::select(nct_id, json) |> 
+  unique()
+
+## lookup cancer types and molecular dysfunctions using dictionaries
+trial_annotations = criteriaR::eligibilityLookup(json_data = trial_annotations, dictionaries = dictionaries)
+
+## form prompt to lookup using LLM
+trial_annotations = criteriaR::formPrompt1(eligibility_data = trial_annotations)
+
+## check whether each prompt has been used before (and if so, use previous outputs)
+trial_annotations = criteriaR::checkPrompt1Outputs(latest_prompts = trial_annotations, db_path = db_path)
+
+## lookup conditions and alterations using LLM
+trial_annotations = criteriaR::eligibility_LLM_lookup(eligibility_data = trial_annotations, 
+                                               dictionaries = dictionaries, 
+                                               llm_endpoint = Sys.getenv('LLM_ENDPOINT'), 
+                                               llm_api_key = Sys.getenv('LLM_API_KEY'))
+
+## form prompt to generate trial logic
+trial_annotations = criteriaR::formPrompt2(eligibility_data = trial_annotations, thesaurus = thesaurus)
+
+## check if prompt 2 has been used before
+trial_annotations = criteriaR::checkPrompt2Outputs(latest_prompts = trial_annotations, db_path = db_path)
+
+## call LLM to create eligibility logic expressions
+trial_annotations = criteriaR::createEligibilityLogic(eligibility_data = trial_annotations)
+
+## unnest the eligibility logic dataframe
+trial_annotations = criteriaR::unnestEligibilityLogic(eligibility_data = trial_annotations, raw_trial_data = trial_data)
+
+trial_annotations = criteriaR::checkEligibilityLogic(eligibility_data = trial_annotations)
+
+## flatten list-columns before saving to DB
+trial_annotations <- trial_annotations |>
+    dplyr::mutate(
+      across(c(cancer_lookup, moldysf_lookup, cancer_lookup_llm, moldysf_lookup_llm, cancer_lookups_combined, moldysf_lookups_combined), ~ purrr::map_chr(., ~ paste(., collapse = "|")))) |>
+    dplyr::select(nct_id, json, cancer_lookup, moldysf_lookup, prompt_1, prompt_1_output, cancer_lookup_llm, moldysf_lookup_llm, cancer_lookups_combined, moldysf_lookups_combined, cancer_codes_json, moldysf_codes_json, prompt_2, prompt_2_output, dg_id, dg_title, dg_status, logic, valid_logic, whitelist)
+
+```
+
+```{r preview}
+## preview
+trial_annotations |> 
+    dplyr::select(nct_id, json, dg_id, dg_title, dg_status, logic, valid_logic, whitelist) |> 
+    unique() |> 
+  head(2)
+
+
+
+```
+
+### **Predicting eligibility for a patient**  
+  
+```{r generate an example patient}
+## attribute values must be NCI thesaurus codes
+test_patient <- list(
+  condition = 'C2955',    ## Colorectal Carcinoma
+  alteration = 'C98365'   ## KRAS NP_004976.2:p.G12C
+)
+
+```
+
+```{r exapnd patient cancer type}
+
+## expand conditions
+
+if(!(DBI::dbIsValid(sqlite_con))) sqlite_con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
+
+condition_descendants = nciTools::getDescendants(codes = test_patient$condition, db_connection = sqlite_con) |>
+  dplyr::pull(code) |> 
+  unique()
+
+condition_ancestors = nciTools::getAncestors(codes = test_patient$condition, db_connection = sqlite_con) |> dplyr::pull(code) |> unique()
+
+expanded_conditions = unique(c(test_patient$condition, condition_ancestors, condition_descendants))
+
+test_patient$condition = expanded_conditions
+```
+
+```{r expand patient alteration}
+alteration = test_patient$alteration
+
+alteration_relations = nciTools::getNCIt_relationships(code = alteration, include_what = 'inverseRoles')
+
+if(!is.null(alteration_relations)) {
+      relation_codes = alteration_relations |> 
+        dplyr::filter(type %in% c('Gene_Product_Sequence_Variation_Encoded_By_Gene_Mutant', 'Gene_Mutant_Encodes_Gene_Product_Sequence_Variation')) |> 
+        dplyr::pull(relatedCode) |> 
+        unique()  
+      
+      alteration = unique(c(alteration, relation_codes))
+  }
+
+
+alteration_ancestors = nciTools::getAncestors(codes = alteration, db_connection = sqlite_con) |> 
+    dplyr::pull(code)
+  
+expanded_alterations = unique(c(alteration, alteration_ancestors))
+
+test_patient$alteration = expanded_alterations
+
+```
+
+```{r evaluate logic for test patient}
+
+tictoc::tic('Make eligibility predictions')
+for(i in 1:nrow(trial_annotations)) {
+  print('Trial/treatment arm:')
+  trial_annotations |> 
+    dplyr::slice(i) |>
+    dplyr::select(nct_id, dg_title, dg_status) |> 
+    print()
+  
+  logic = trial_annotations$logic[i]
+  prediction = criteriaR::evalTrialLogic(patient = test_patient, trial_logic_string = logic)
+  print(paste0('Test patient eligibility: ', prediction))
+
+  
+}
+tictoc::toc()
+
+```
+
+
+```{r disconnect from DB}
+if(DBI::dbIsValid(sqlite_con)) DBI::dbDisconnect(sqlite_con)
+
+DBI::dbDisconnect(ct_gov_connection)
+```
+

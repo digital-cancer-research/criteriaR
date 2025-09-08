@@ -25,8 +25,6 @@ eligibility_LLM_lookup = function(eligibility_data, dictionaries, llm_endpoint,l
   for(i in 1:nrow(eligibility_lookups)) {
 
     if(!is.na(eligibility_lookups$prompt_1_output[i])) {
-      print(i)
-      print('already used this prompt, using stored output')
       next
     }
 
@@ -40,14 +38,11 @@ eligibility_LLM_lookup = function(eligibility_data, dictionaries, llm_endpoint,l
     ## OTHERWISE COULD GET STUCK IN A PERMANENT LOOP HERE....
 
     while(is.na(terms)) {
-      print('Waiting (first call to LLM) .....')
       # Introduce a delay to avoid hitting the rate limit (e.g., 1 second)
       Sys.sleep(20)  # Adjust the duration as needed based on the rate limit
 
       terms = criteriaR::callLLM(prompt = prompt_1)
     }
-
-    print(terms)
 
     eligibility_lookups$prompt_1_output[i] <- terms
 
