@@ -34,6 +34,7 @@ unnestEligibilityLogic = function(eligibility_data, raw_trial_data ) {
 
   # Unnest the logic_df column while keeping empty rows
   eligibility_data <- eligibility_data |>
+    dplyr::filter(purrr::map_lgl(logic_df, ~ length(.x) > 0)) |>       ## drop rows where logic_df is empty
     tidyr::unnest(cols = 'logic_df', keep_empty = T, names_sep = '_') |>
     as.data.frame() |>
     dplyr::rename(logic = logic_df_logic_string) |>
