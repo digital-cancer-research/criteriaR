@@ -7,9 +7,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 require(dplyr)
 require(tictoc)
+require(nciTools)
+require(criteriaR)
 
-devtools::install_github("digital-cancer-research/nciTools")
-devtools::install_github("digital-cancer-research/criteriaR")
+# devtools::install_github("digital-cancer-research/nciTools")
+# devtools::install_github("digital-cancer-research/criteriaR")
 
 ```
 
@@ -219,8 +221,14 @@ trial_annotations |>
     unique() |> 
   head(2)
 
-
-
+## replace codes with preferred terms
+replacements <- setNames(thesaurus$thesaurus$PT, thesaurus$thesaurus$code)
+trial_annotations |> 
+    dplyr::select(nct_id, dg_title, logic) |> 
+    head() |> 
+    dplyr::mutate(
+    logic = stringr::str_replace_all(logic, replacements)
+    )
 ```
 
 ### **Predicting eligibility for a patient**  
@@ -280,14 +288,22 @@ test_patient$alteration = expanded_alterations
 tictoc::tic('Make eligibility predictions')
 for(i in 1:nrow(trial_annotations)) {
   print('Trial/treatment arm:')
+  cat('\n')
   trial_annotations |> 
     dplyr::slice(i) |>
     dplyr::select(nct_id, dg_title, dg_status) |> 
     print()
   
   logic = trial_annotations$logic[i]
+  
+  print('Eligibility logic:')
+  stringr::str_replace_all(logic, replacements) |> print()
+  cat('\n')
+  
   prediction = criteriaR::evalTrialLogic(patient = test_patient, trial_logic_string = logic)
+  
   print(paste0('Test patient eligibility: ', prediction))
+  cat('\n-----------------------------------\n')
 
   
 }
