@@ -28,7 +28,7 @@ eligibility_LLM_lookup = function(eligibility_data, dictionaries, llm_endpoint,l
       next
     }
 
-    print(paste0('First call to LLM: ', i))
+    # print(paste0('First call to LLM: ', i))
     prompt_1 = eligibility_lookups$prompt_1[i]
 
     terms = criteriaR::callLLM(prompt = prompt_1, endpoint = llm_endpoint, api_key = llm_api_key)

@@ -6,7 +6,6 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 require(dplyr)
-require(tictoc)
 require(nciTools)
 require(criteriaR)
 
@@ -48,6 +47,10 @@ dictionaries = list(
 
   alteration_dict = nciTools::createDictionary(source_data = thesaurus$thesaurus, semantic_types = 'Cell or Molecular Dysfunction')
 )
+
+## create a named vector that can be used to replace codes with PTs
+replacements <- setNames(thesaurus$thesaurus$PT, thesaurus$thesaurus$code)
+
 ```
 
 ### **Download trial data**  
@@ -100,7 +103,7 @@ all_study_ids = unique(studies$nct_id)
 
 set.seed(1234)
 
-sampled_study_ids = sample(all_study_ids, size = 50)
+sampled_study_ids = sample(all_study_ids, size = 10)
 
 ```
 
@@ -217,18 +220,19 @@ trial_annotations <- trial_annotations |>
 ```{r preview}
 ## preview
 trial_annotations |> 
-    dplyr::select(nct_id, json, dg_id, dg_title, dg_status, logic, valid_logic, whitelist) |> 
-    unique() |> 
-  head(2)
-
-## replace codes with preferred terms
-replacements <- setNames(thesaurus$thesaurus$PT, thesaurus$thesaurus$code)
-trial_annotations |> 
-    dplyr::select(nct_id, dg_title, logic) |> 
+    dplyr::select(nct_id, dg_title, valid_logic, whitelist, logic) |> 
     head() |> 
     dplyr::mutate(
-    logic = stringr::str_replace_all(logic, replacements)
-    )
+        logic_PTs = stringr::str_replace_all(logic, replacements)
+    ) 
+
+## view trial information for first row
+trial_annotations$json[1] |> jsonlite::fromJSON() 
+
+## view criteriaR logic annotation for this trial
+trial_annotations$logic[1] |> stringr::str_replace_all( replacements) |> cat()
+
+
 ```
 
 ### **Predicting eligibility for a patient**  
@@ -285,29 +289,27 @@ test_patient$alteration = expanded_alterations
 
 ```{r evaluate logic for test patient}
 
-tictoc::tic('Make eligibility predictions')
 for(i in 1:nrow(trial_annotations)) {
   print('Trial/treatment arm:')
   cat('\n')
-  trial_annotations |> 
+  trial_annotations |>
     dplyr::slice(i) |>
-    dplyr::select(nct_id, dg_title, dg_status) |> 
+    dplyr::select(nct_id, dg_title, dg_status) |>
     print()
-  
+
   logic = trial_annotations$logic[i]
-  
+
   print('Eligibility logic:')
   stringr::str_replace_all(logic, replacements) |> print()
   cat('\n')
-  
+
   prediction = criteriaR::evalTrialLogic(patient = test_patient, trial_logic_string = logic)
-  
+
   print(paste0('Test patient eligibility: ', prediction))
   cat('\n-----------------------------------\n')
 
-  
+
 }
-tictoc::toc()
 
 ```
 

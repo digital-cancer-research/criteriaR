@@ -16,7 +16,7 @@ createEligibilityLogic = function(eligibility_data, llm_endpoint,llm_api_key) {
     if(!is.na(eligibility_criteria$prompt_2_output[i])) {
       next
     }
-    cat(paste0('Second call to LLM, i = ', i, '\n\n'))
+    # cat(paste0('Second call to LLM, i = ', i, '\n\n'))
     prompt_2 = eligibility_criteria$prompt_2[i]
     if(is.na(prompt_2)) {
       next
