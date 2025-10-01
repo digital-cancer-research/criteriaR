@@ -9,16 +9,13 @@ require(dplyr)
 require(nciTools)
 require(criteriaR)
 
-# devtools::install_github("digital-cancer-research/nciTools")
-# devtools::install_github("digital-cancer-research/criteriaR")
-
 ```
 
 ```{r country configurations}
 
 country = "United Kingdom"
+## create a temporary SQLIte DB
 db_path <- file.path(tempdir(), "mydb.sqlite")
-## connect to / create a new SQLIte DB at specified path
 sqlite_con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
 ```
 
@@ -27,13 +24,14 @@ sqlite_con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
 NCIt_raw = nciTools::downloadThesaurus()
 
 thesaurus = nciTools::processThesaurus(NCIt = NCIt_raw)
-## NCIt is a named list with dataframes thesaurus, parents and synonyms
+## thesaurus is a named list with dataframes thesaurus, parents and synonyms
 
 ## save thesaurus to DB
 nciTools::saveThesaurus(thesaurus_processed = thesaurus, db_connection = sqlite_con)
 
+## create a named vector that can be used to replace codes with PTs
+replacements <- setNames(thesaurus$thesaurus$PT, thesaurus$thesaurus$code)
 ```
-
 
 ```{r create dictionaries}
 
@@ -48,15 +46,12 @@ dictionaries = list(
   alteration_dict = nciTools::createDictionary(source_data = thesaurus$thesaurus, semantic_types = 'Cell or Molecular Dysfunction')
 )
 
-## create a named vector that can be used to replace codes with PTs
-replacements <- setNames(thesaurus$thesaurus$PT, thesaurus$thesaurus$code)
-
 ```
 
 ### **Download trial data**  
   
 ```{r connect to clinicaltrialsgov database mirror}
-
+## amend user and password details as needed
 drv = RPostgres::Postgres()
 ct_gov_connection <- DBI::dbConnect(drv,
                               dbname="aact",
@@ -68,8 +63,7 @@ ct_gov_connection <- DBI::dbConnect(drv,
 
 ```
 
-```{r download trial data parameterised}
-
+```{r download trial data}
 
 ## get data for all cancer studies with at least one site open or in setup in the specified country
 studies_query <- "SELECT DISTINCT s.nct_id, s.last_update_posted_date, s.primary_completion_date, study_type, s.acronym, s.brief_title, s.overall_status, s.phase, s.number_of_arms
@@ -94,8 +88,6 @@ studies_query <- "SELECT DISTINCT s.nct_id, s.last_update_posted_date, s.primary
 studies <- DBI::dbGetQuery(ct_gov_connection,studies_query, params = list(tolower(country)))
 
 ```
-
-
 
 ```{r define a subset of trials for analysis}
 
@@ -149,7 +141,7 @@ facility_contacts <- DBI::dbGetQuery(ct_gov_connection,
                                  statement = "SELECT DISTINCT * FROM facility_contacts WHERE nct_id IN ($1)",
                                  params = list(sampled_study_ids)
                               )
-
+# save trial_data as a list of dataframes 
 trial_data = list(
     studies= studies,
     facilities = facilities,
@@ -162,19 +154,12 @@ trial_data = list(
     eligibilities = eligibilities
   )
 
-# trial_data is a list of dataframes 
-# [1] "studies"                    "facilities"                 "facility_contacts"         
-# [4] "conditions"                 "designs"                    "design_groups"             
-# [7] "design_group_interventions" "interventions"              "eligibilities"
 
 ```
-
 
 ### **Annotate trial data**  
   
 ```{r form eligibility logic, echo=TRUE, results='hide'}
-## print statements outputs hidden for this chunk
-
 ## get trial data as json string
 trial_annotations = criteriaR::compose_trial_json(trial_data = trial_data) |> 
   dplyr::select(nct_id, json) |> 
@@ -183,13 +168,14 @@ trial_annotations = criteriaR::compose_trial_json(trial_data = trial_data) |>
 ## lookup cancer types and molecular dysfunctions using dictionaries
 trial_annotations = criteriaR::eligibilityLookup(json_data = trial_annotations, dictionaries = dictionaries)
 
-## form prompt to lookup using LLM
+## form prompt to lookup cancer types and molecular dysfunctions using LLM
 trial_annotations = criteriaR::formPrompt1(eligibility_data = trial_annotations)
 
 ## check whether each prompt has been used before (and if so, use previous outputs)
 trial_annotations = criteriaR::checkPrompt1Outputs(latest_prompts = trial_annotations, db_path = db_path)
 
-## lookup conditions and alterations using LLM
+## lookup cancer types and molecular dysfunctions using LLM
+## amend LLM endpoint and api key as needed
 trial_annotations = criteriaR::eligibility_LLM_lookup(eligibility_data = trial_annotations, 
                                                dictionaries = dictionaries, 
                                                llm_endpoint = Sys.getenv('LLM_ENDPOINT'), 
@@ -202,14 +188,17 @@ trial_annotations = criteriaR::formPrompt2(eligibility_data = trial_annotations,
 trial_annotations = criteriaR::checkPrompt2Outputs(latest_prompts = trial_annotations, db_path = db_path)
 
 ## call LLM to create eligibility logic expressions
-trial_annotations = criteriaR::createEligibilityLogic(eligibility_data = trial_annotations)
+trial_annotations = criteriaR::createEligibilityLogic(eligibility_data = trial_annotations, 
+                                               llm_endpoint = Sys.getenv('LLM_ENDPOINT'), 
+                                               llm_api_key = Sys.getenv('LLM_API_KEY'))
 
 ## unnest the eligibility logic dataframe
 trial_annotations = criteriaR::unnestEligibilityLogic(eligibility_data = trial_annotations, raw_trial_data = trial_data)
 
+## check whether expressions are valid, and contain only allowed content
 trial_annotations = criteriaR::checkEligibilityLogic(eligibility_data = trial_annotations)
 
-## flatten list-columns before saving to DB
+## flatten list-columns and save to DB
 trial_annotations <- trial_annotations |>
     dplyr::mutate(
       across(c(cancer_lookup, moldysf_lookup, cancer_lookup_llm, moldysf_lookup_llm, cancer_lookups_combined, moldysf_lookups_combined), ~ purrr::map_chr(., ~ paste(., collapse = "|")))) |>
@@ -246,28 +235,30 @@ test_patient <- list(
 
 ```
 
-```{r exapnd patient cancer type}
+```{r exapnd patient cancer type terms}
 
 ## expand conditions
-
+# reconnect to temporary database if needed
 if(!(DBI::dbIsValid(sqlite_con))) sqlite_con <- DBI::dbConnect(RSQLite::SQLite(), db_path)
 
+## get lower level terms
 condition_descendants = nciTools::getDescendants(codes = test_patient$condition, db_connection = sqlite_con) |>
   dplyr::pull(code) |> 
   unique()
 
+## get higher level terms
 condition_ancestors = nciTools::getAncestors(codes = test_patient$condition, db_connection = sqlite_con) |> dplyr::pull(code) |> unique()
 
+# update patient$condition to include all the expanded terms
 expanded_conditions = unique(c(test_patient$condition, condition_ancestors, condition_descendants))
-
 test_patient$condition = expanded_conditions
 ```
 
-```{r expand patient alteration}
+```{r expand patient alteration terms}
 alteration = test_patient$alteration
 
+## get both DNA and protein terms
 alteration_relations = nciTools::getNCIt_relationships(code = alteration, include_what = 'inverseRoles')
-
 if(!is.null(alteration_relations)) {
       relation_codes = alteration_relations |> 
         dplyr::filter(type %in% c('Gene_Product_Sequence_Variation_Encoded_By_Gene_Mutant', 'Gene_Mutant_Encodes_Gene_Product_Sequence_Variation')) |> 
@@ -277,12 +268,12 @@ if(!is.null(alteration_relations)) {
       alteration = unique(c(alteration, relation_codes))
   }
 
-
+## get higher level terms of each
 alteration_ancestors = nciTools::getAncestors(codes = alteration, db_connection = sqlite_con) |> 
     dplyr::pull(code)
-  
-expanded_alterations = unique(c(alteration, alteration_ancestors))
 
+# update patient$alteration to include all the expanded terms   
+expanded_alterations = unique(c(alteration, alteration_ancestors))
 test_patient$alteration = expanded_alterations
 
 ```
