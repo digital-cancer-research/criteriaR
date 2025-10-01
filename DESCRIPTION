@@ -1,9 +1,9 @@
 Package: criteriaR
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: A Research Package for Annotation of Clinical Trial Records to Support Eligibility Matching
+Version: 1.0.0
 Authors@R: 
     person("Paul", "O'Regan", , "paul.oregan@cruk.manchester.ac.uk", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: a set of functions that work together to download and annotate clinical trial records to enable eligibility assessment at scale.
 License: file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
