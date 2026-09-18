@@ -28,6 +28,20 @@
 #'    - `C` followed by one or more digits
 #'@export
 checkEligibilityLogic = function(eligibility_data) {
+
+  ## check that each expression adheres to the constraints specified in the instructions to LLM
+  # the only allowed operators are %in%, !, & (not &&) and | (not ||)
+  # the only allowed function is any()
+  # Define allowed pattern
+  allowed_pattern <- "^(\\s*(!|\\(|\\)|%in%|&|\\||any\\(|patient\\$(condition|alteration)|c\\(|\"C\\d+\"|,|\\s)*)+$"
+
+  eligibility_data$whitelist <- grepl(pattern = allowed_pattern, x = eligibility_data$logic)
+
+  ## delete rows containing disallowed terms
+  eligibility_data <- eligibility_data |>
+    dplyr::filter(whitelist == 1)
+
+
   ## test each logic string against a synthetic patient object to see if it errors...
   # define an exemplar patient object}
   test_patient <- list(
@@ -62,18 +76,6 @@ checkEligibilityLogic = function(eligibility_data) {
   ## convert NA values to FALSE
   eligibility_data <- eligibility_data |>
     dplyr::mutate(valid_logic = ifelse(is.na(valid_logic), FALSE, valid_logic))
-
-  ## check that each expression adheres to the constraints specified in the instructions to LLM
-  # the only allowed operators are %in%, !, & (not &&) and | (not ||)
-  # the only allowed function is any()
-  # Define allowed pattern
-  allowed_pattern <- "^(\\s*(!|\\(|\\)|%in%|&|\\||any\\(|patient\\$(condition|alteration)|c\\(|\"C\\d+\"|,|\\s)*)+$"
-
-  eligibility_data$whitelist <- grepl(pattern = allowed_pattern, x = eligibility_data$logic)
-
-  ## delete rows containing invalid logic
-  eligibility_data <- eligibility_data |>
-    dplyr::filter(whitelist == 1)
 
 
   return(eligibility_data)
